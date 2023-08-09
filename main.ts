@@ -1,3 +1,5 @@
+import { obsidianEquations } from "emoji";
+import { MarkdownRenderChild } from "obsidian";
 import { App, Editor, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 // Remember to rename these classes and interfaces!
@@ -10,32 +12,45 @@ const DEFAULT_SETTINGS: ObsidianEquationsSettings = {
 	mySetting: "test",
 };
 
+export class EquationNumber extends MarkdownRenderChild {
+	number: number;
+
+	constructor(containerEl: HTMLElement, number: number) {
+		super(containerEl);
+
+		this.number = number;
+	}
+
+	onload() {
+		const numberElement = this.containerEl.createSpan({
+			text: `(${this.number})`,
+		});
+		this.containerEl.appendChild(numberElement);
+	}
+}
+
 export default class ObsidianEquations extends Plugin {
 	settings: ObsidianEquationsSettings;
 
 	async onload() {
+		this.registerMarkdownPostProcessor((element, context) => {
+			console.log("Running MarkdownPostProcessor", element);
+			const equationBlocks = element.getElementsByClassName("math-block");
+
+			for (let index = 0; index < equationBlocks.length; index++) {
+				const equationBlock = equationBlocks.item(index);
+				console.log("equationBlock", equationBlock);
+				if (!equationBlock) {
+					continue;
+				}
+				context.addChild(new EquationNumber(equationBlock, index + 1));
+			}
+		});
+
 		await this.loadSettings();
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		// this.registerDomEvent(document, "click", (evt: MouseEvent) => {
-		// 	console.log("click test", evt);
-		// });
-
-		// register new event handler for when user types in editor
-		this.registerEvent(
-			this.app.workspace.on("editor-change", (editor: Editor) => {
-				// get the current line
-				const line = editor.getLine(editor.getCursor().line);
-				// check if the line starts with a double dollar sign
-				if (line.startsWith("$$")) {
-					console.log(line);
-				}
-			})
-		);
 	}
 
 	onunload() {}
